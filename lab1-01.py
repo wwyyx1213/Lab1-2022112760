@@ -1,3 +1,5 @@
+# 最初版本的实验代码，无图形化操作界面，已被废弃
+
 def showDirectedGraph(self):
         G = nx.DiGraph()
         for u in self.graph:

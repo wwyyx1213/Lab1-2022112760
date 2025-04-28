@@ -1,4 +1,4 @@
-# Lab1 实验：基于大模型的编程与Git实战  可视化界面
+# Lab1 实验：基于大模型的编程与Git实战  可视化界面 Changes on B2
 
 import warnings
 warnings.filterwarnings("ignore")
