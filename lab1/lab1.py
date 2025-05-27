@@ -9,13 +9,13 @@ import re
 import random
 import sys
 from collections import defaultdict, deque
-import matplotlib.pyplot as plt
-import networkx as nx
-from matplotlib.widgets import Button
-import matplotlib.patches as patches
-import numpy as np
-import tkinter as tk
-from tkinter import simpledialog, messagebox, filedialog, scrolledtext
+import matplotlib.pyplot as plt   # 可视化图表
+import networkx as nx  # 有向图
+from matplotlib.widgets import Button  # 按钮
+import matplotlib.patches as patches  # 箭头
+import numpy as np  # 数值计算
+import tkinter as tk  # 图形界面
+from tkinter import simpledialog, messagebox, filedialog, scrolledtext  # 对话框
 
 # =========================
 # 有向图类，包含图的构建、可视化、分析等功能
@@ -182,9 +182,9 @@ class DirectedGraph:
         else:
             scale_factor = 1
         new_width = (cur_xlim[1] - cur_xlim[0]) * scale_factor
-        new_height = (cur_ylim[1] - cur_ylim[0]) * scale_factor
+        new_height = (cur_ylim[1] - cur_xlim[0]) * scale_factor
         relx = (cur_xlim[1] - xdata) / (cur_xlim[1] - cur_xlim[0])
-        rely = (cur_ylim[1] - ydata) / (cur_ylim[1] - cur_ylim[0])
+        rely = (cur_ylim[1] - ydata) / (cur_ylim[1] - cur_xlim[0])
         self.ax.set_xlim([xdata - new_width * (1 - relx), xdata + new_width * relx])
         self.ax.set_ylim([ydata - new_height * (1 - rely), ydata + new_height * rely])
         self.fig.canvas.draw_idle()
@@ -226,17 +226,65 @@ class DirectedGraph:
         new_text.append(words[-1])
         return ' '.join(new_text)
 
-    def calcShortestPath(self, word1, word2):
-        # 计算最短路径，BFS实现
-        word1, word2 = word1.lower(), word2.lower()
+    def calcShortestPath(self, word1, word2=None):
+        # 计算最短路径，支持单个单词到所有其他单词的路径计算
+        word1 = word1.lower()
         if word1 not in self.graph:
             return f"错误：起始单词 '{word1}' 不在图中"
+
+        # 如果只输入一个单词，计算到所有其他单词的最短路径
+        if word2 is None:
+            all_paths = []
+            dist = defaultdict(lambda: float('inf'))
+            prev = {}
+            dist[word1] = 0
+            q = deque([word1])
+            
+            # BFS计算最短路径
+            while q:
+                u = q.popleft()
+                for v in self.graph[u]:
+                    if dist[u] + self.graph[u][v] < dist[v]:
+                        dist[v] = dist[u] + self.graph[u][v]
+                        prev[v] = u
+                        q.append(v)
+            
+            # 收集所有可达节点的路径
+            for target in self.graph.keys():
+                if target != word1 and dist[target] != float('inf'):
+                    path = []
+                    cur = target
+                    while cur != word1:
+                        path.append(cur)
+                        cur = prev[cur]
+                    path.append(word1)
+                    path.reverse()
+                    all_paths.append((target, path, dist[target]))
+            
+            # 按路径长度排序
+            all_paths.sort(key=lambda x: x[2])
+            
+            # 格式化输出
+            if not all_paths:
+                return f"从 '{word1}' 无法到达任何其他单词"
+            
+            result = [f"从 '{word1}' 出发的所有最短路径："]
+            for target, path, distance in all_paths:
+                result.append(f"\n到 '{target}':")
+                result.append(f"路径: {' -> '.join(path)}")
+                result.append(f"总权重: {distance:.2f}")
+            return "\n".join(result)
+        
+        # 如果输入两个单词，计算它们之间的最短路径
+        word2 = word2.lower()
         if word2 not in self.graph:
             return f"错误：目标单词 '{word2}' 不在图中"
+        
         dist = defaultdict(lambda: float('inf'))
         prev = {}
         dist[word1] = 0
         q = deque([word1])
+        
         while q:
             u = q.popleft()
             for v in self.graph[u]:
@@ -244,8 +292,10 @@ class DirectedGraph:
                     dist[v] = dist[u] + self.graph[u][v]
                     prev[v] = u
                     q.append(v)
+        
         if word2 not in dist or dist[word2] == float('inf'):
             return f"从 '{word1}' 到 '{word2}' 不存在路径"
+        
         path = []
         cur = word2
         while cur != word1:
@@ -253,6 +303,7 @@ class DirectedGraph:
             cur = prev[cur]
         path.append(word1)
         path.reverse()
+        
         return f"从 '{word1}' 到 '{word2}' 的最短路径是:\n{' -> '.join(path)}\n总权重: {dist[word2]:.2f}"
 
     def calPageRank(self, d=0.85, max_iter=100, tol=1e-6):
@@ -408,11 +459,11 @@ def main():
         show_result("生成的新文本:\n" + res)
     def btn_shortest_path():
         w1 = simpledialog.askstring("最短路径", "请输入起始单词:")
-        w2 = simpledialog.askstring("最短路径", "请输入目标单词:")
-        if not w1 or not w2:
-            messagebox.showerror("错误", "单词不能为空")
+        if not w1:
+            messagebox.showerror("错误", "起始单词不能为空")
             return
-        res = graph.calcShortestPath(w1, w2)
+        w2 = simpledialog.askstring("最短路径", "请输入目标单词（可选，留空则计算到所有单词的路径）:")
+        res = graph.calcShortestPath(w1, w2 if w2 else None)
         show_result(res)
     def btn_pagerank():
         pr = graph.calPageRank()
